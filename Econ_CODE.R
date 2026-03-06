@@ -15,3 +15,5 @@ step(fiteconmodel, k = log(nrow(econ2018rev)))
 
 summary(fiteconmodel)
 
+install.packages("ggplot2")
+ownpovplot <- plot(OWNMONY, POORPCT2, data())
