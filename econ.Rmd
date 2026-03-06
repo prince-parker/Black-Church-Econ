@@ -1,0 +1,171 @@
+---
+title: "Econ_CODE"
+output: html_document
+date: "2026-02-23"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+econ2018 <- da03471.0001 %>% filter(YEAR == "2018")
+
+```
+
+write.csv(econ2018, "/Users/princeparker/Downloads/Coursework/Econ Dev/BC_Econ/econ2018.csv", row.names = FALSE)
+
+```{r}
+econ2018rev <- econ2018 %>% select(YEAR, OWNMONY, NUMPROG, INCOME, POOR30_ALL4, POORPCT1, POORPCT2, RICHPCT1, RICHPCT2, CLERRACE, ENDOWAMT, NDMONY, GOVFUND1_18, GOVFUND2_18, BAPCT, BLACKPCT, MILLNESS, NOJOB, URBAN_ALL4, NUMADLTS, SOCLSERV, BLCK80_ALL4, UNEMPCT, CNGDEBT1, CAPCPGN, CAPCPGN1, INC2YA1, TFAMPCT, UNEMPCT, GAYPCT, ONLYPCT, MALELEAD, SPARPCT, LATINPCT, WHITEPCT, OWNPCT, SHRTDPCT, LONGDPCT, SHRTWPCT, GT60PCT, LT35PCT, NEWPCT, NODIPPCT, FEMPCT, MONEY2, MONEY3, MONEY1, SPNDDEN1, SPNDDEN2, SPNDREL1)
+
+econrevised <- da03471.0001 %>% select(YEAR, OWNMONY, NUMPROG, INCOME, POOR30_ALL4, POORPCT1, POORPCT2, RICHPCT1, RICHPCT2, CLERRACE, ENDOWAMT, NDMONY, GOVFUND1_18, GOVFUND2_18, BAPCT, BLACKPCT, MILLNESS, NOJOB, URBAN_ALL4, NUMADLTS, SOCLSERV, BLCK80_ALL4, UNEMPCT, CNGDEBT1, CAPCPGN, CAPCPGN1, INC2YA1, TFAMPCT, UNEMPCT, GAYPCT, ONLYPCT, MALELEAD, SPARPCT, LATINPCT, WHITEPCT, OWNPCT, SHRTDPCT, LONGDPCT, SHRTWPCT, GT60PCT, LT35PCT, NEWPCT, NODIPPCT, FEMPCT, MONEY2, MONEY3, MONEY1, SPNDDEN1, SPNDDEN2, SPNDREL1, APPLYGOV, RENTBLDG, ENDOW, POLICY, GOVFUND1_98, GOVFUND1_06, GOVFUND1_12, GOVFUND1_18, GOVFUND2_98, GOVFUND2_06, GOVFUND2_12, GOVFUND2_18, REGION, FOUNDED, DENOM, DENCODE, TRAD3, OWNBLDG, REMODEL, BLDGYEAR)
+
+View(econrevised)
+```
+#factor
+```{r}
+econ2018rev$OWNMONY <- factor(econ2018rev$OWNMONY)
+econ2018rev$POOR30_ALL4 <- factor(econ2018rev$POOR30_ALL4)
+econ2018rev$NDMONY <- factor(econ2018rev$NDMONY)
+econ2018rev$GOVFUND1_18 <- factor(econ2018rev$GOVFUND1_18)
+econ2018rev$NOJOB <- factor(econ2018rev$NOJOB)
+econ2018rev$URBAN_ALL4 <- factor(econ2018rev$URBAN_ALL4)
+econ2018rev$BLCK80_ALL4 <- factor(econ2018rev$BLCK80_ALL4)
+econ2018rev$INC2YA1 <- factor(econ2018rev$INC2YA1)
+econ2018rev$YEAR <- factor(econ2018rev$YEAR)
+econ_black50_ALL$INC2YA1 <- factor(econ_black50_ALL$INC2YA1)
+econ_black50_ALL$NOJOB <- factor(econ_black50_ALL$NOJOB)
+```
+
+```{r}
+fiteconmodel <- lm(
+  POORPCT2 ~ OWNMONY + NUMPROG + INCOME + POOR30_ALL4 +
+    + RICHPCT2 +
+    CLERRACE + NDMONY + GOVFUND1_18 + GOVFUND2_18,
+  data = econ2018rev
+)
+step(fiteconmodel, k = log(nrow(econ2018rev)))
+
+summary(fiteconmodel)
+```
+
+```{r}
+econ_black50 <- econ2018rev[econ2018rev$BLACKPCT >= 50, ]
+econ_black50_ALL <- subset(da03471.0001, BLACKPCT >= 50, )
+econblack80_ALL <- subset(da03471.0001, BLCK80_ALL4 == "(1) Yes")
+```
+
+```{r}
+library(leaps)
+fit.allsub = regsubsets(POORPCT2 ~ OWNMONY + NUMPROG + INCOME + POOR30_ALL4 +
+    + RICHPCT2 +
+    CLERRACE + NDMONY + GOVFUND1_18 + GOVFUND2_18,
+  data = econ2018rev, nvmax = 9, method="exhaustive")
+
+sum.allsub = summary(fit.allsub)
+
+sum.allsub$bic
+```
+```{r}
+sum.allsub$outmat
+```
+
+```{r}
+fit2018 <- lm(INCOME ~ OWNMONY + POORPCT2 + URBAN_ALL4 + NUMPROG + RICHPCT2, data = econ2018rev)
+summary(fit2018)
+```
+```{r}
+econ2018rev$URBAN_binary <- ifelse(econ2018rev$URBAN_ALL4 == "(3) Rural", 1, 0)
+```
+
+```{r}
+library(mediation)
+
+med_model <- glm(OWNMONY ~ URBAN_binary + POORPCT2 + BAPCT +
+                 RICHPCT2 + NOJOB,
+                 data = econ2018rev,
+                 family = binomial)
+out_model <- lm(INCOME ~ URBAN_binary + OWNMONY +
+                POORPCT2 + BAPCT + RICHPCT2 + NOJOB,
+                data = econ2018rev)
+med_results <- mediate(med_model, out_model,
+                       treat = "URBAN_binary",
+                       mediator = "OWNMONY",
+                       boot = TRUE,
+                       sims = 1000)
+
+summary(med_results)
+```
+```{r}
+vars_needed <- c("URBAN_binary", "OWNMONY", "INCOME",
+                 "POORPCT2", "BAPCT", "RICHPCT2",
+                 "NOJOB")
+
+econ_med <- econ2018rev[complete.cases(econ2018rev[, vars_needed]), ]
+
+
+library(mediation)
+
+# Mediator model
+med_model <- glm(OWNMONY ~ URBAN_binary + POORPCT2 + BAPCT +
+                 RICHPCT2 + NOJOB,
+                 data = econ_med,
+                 family = binomial)
+
+# Outcome model
+out_model <- lm(INCOME ~ URBAN_binary + OWNMONY +
+                POORPCT2 + BAPCT + RICHPCT2 +
+                NOJOB,
+                data = econ_med)
+
+med_results <- mediate(med_model, out_model,
+                       treat = "URBAN_binary",
+                       mediator = "OWNMONY",
+                       boot = TRUE,
+                       sims = 1000)
+
+summary(med_results)
+```
+```{r}
+install.packages("lavaan")
+library(lavaan)
+
+econ_med$OWNMONY_num <- ifelse(
+  as.character(econ_med$OWNMONY) == "(1) Yes",
+  1, 0
+)
+model <- '
+  # mediator
+  OWNMONY_num ~ a*URBAN_binary + c1*POORPCT2 + c2*BAPCT
+
+  # outcome
+  INCOME ~ b*OWNMONY_num + c*URBAN_binary + d1*POORPCT2 + d2*BAPCT
+
+  # indirect effect
+  indirect := a*b
+  total := c + (a*b)
+'
+
+fit <- sem(model, data = econ_med)
+summary(fit, standardized = TRUE)
+```
+```{r}
+fit <- sem(model,
+           data = econ_med,
+           se = "bootstrap",
+           bootstrap = 1000)
+
+summary(fit, standardized = TRUE)
+```
+
+```{r}
+fit2econ <- lm(POORPCT1 ~ OWNMONY + INCOME + URBAN_ALL4 + NUMPROG + RICHPCT2 + NOJOB, data = econ_black50_ALL)
+summary(fit2econ)
+```
+
+```{r}
+fit3model <- lm(POORPCT1 ~ OWNMONY + INCOME + YEAR + NUMPROG +CNGDEBT1, data = da03471.0001)
+summary(fit3model)
+```
+
